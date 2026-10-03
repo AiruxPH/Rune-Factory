@@ -13,29 +13,27 @@ export function setupDialogs(world) {
       if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close();
     }});
   });
-  document.querySelectorAll('[data-pages]').forEach(pager => {
-    const rows = [...document.querySelector('#' + pager.dataset.pages).children];
-    let page = 0, group = 'coins';
-    const size = 3;
-    const render = () => {
-      const visible = rows.filter(row => !row.dataset.group || row.dataset.group === group);
-      const total = Math.max(1, Math.ceil(visible.length / size));
-      page = Math.max(0, Math.min(total - 1, page));
-      rows.forEach(row => { row.hidden = true; });
-      visible.slice(page * size, (page + 1) * size).forEach(row => { row.hidden = false; });
-      pager.querySelector('span').textContent = (page + 1) + ' / ' + total;
-      pager.querySelector('[data-prev]').disabled = page === 0;
-      pager.querySelector('[data-next]').disabled = page === total - 1;
-    };
-    pager.querySelector('[data-prev]').onclick = () => { page--; render(); };
-    pager.querySelector('[data-next]').onclick = () => { page++; render(); };
-    if (pager.dataset.pages === 'upgrades') document.querySelectorAll('[data-currency]').forEach(tab => {
-      tab.onclick = () => {
-        group = tab.dataset.currency; page = 0;
-        document.querySelectorAll('[data-currency]').forEach(t => t.setAttribute('aria-selected', String(t===tab)));
-        render();
-      };
+  const upgradeList = document.querySelector('#upgrades');
+  const selectCurrency = tab => {
+    document.querySelectorAll('[data-currency]').forEach(t => t.setAttribute('aria-selected', String(t === tab)));
+    [...upgradeList.children].forEach(row => { row.hidden = row.dataset.group !== tab.dataset.currency; });
+    upgradeList.scrollLeft = 0;
+  };
+  document.querySelectorAll('[data-currency]').forEach(tab => { tab.onclick = () => selectCurrency(tab); });
+  selectCurrency(document.querySelector('[data-currency]'));
+  document.querySelectorAll('.card-scroller').forEach(list => {
+    // Mouse wheels browse the horizontal card row; trackpads and touch use native scrolling.
+    list.addEventListener('wheel', event => {
+      if (Math.abs(event.deltaX) >= Math.abs(event.deltaY) || event.ctrlKey) return;
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? list.clientWidth : 1;
+      const delta = event.deltaY * unit;
+      const canMove = delta > 0 ? list.scrollLeft < list.scrollWidth - list.clientWidth - 1 : list.scrollLeft > 0;
+      if (canMove) { event.preventDefault(); list.scrollLeft += delta; }
+    }, { passive: false });
+    list.addEventListener('keydown', event => {
+      if (event.target !== list || !['ArrowLeft','ArrowRight'].includes(event.key)) return;
+      event.preventDefault();
+      list.scrollBy({ left: event.key === 'ArrowRight' ? 240 : -240, behavior: 'smooth' });
     });
-    render();
   });
 }
