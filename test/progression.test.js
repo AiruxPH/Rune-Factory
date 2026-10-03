@@ -114,7 +114,7 @@ test('currency-specific upgrades charge their own currency and Max respects caps
 });
 test('v1 saves retain existing upgrades while new stats initialize to defaults', () => {
   const s=migrate({version:1,upgrades:{pad:4,forge:10,autoEnergy:1},runes:{nexus:2}});
-  assert.equal(s.version,3);assert.equal(s.upgrades.pad,4);assert.equal(s.upgrades.forge,10);
+  assert.equal(s.version,4);assert.equal(s.upgrades.pad,4);assert.equal(s.upgrades.forge,10);
   assert.equal(s.upgrades.coinBulk,0);assert.equal(s.runes.nexus,2);
 });
 
@@ -133,4 +133,61 @@ test('legacy rolls are preserved as untracked without fabricated rune quantities
   assert.equal(s.untrackedRolls,395);assert.equal(s.rolls,395);assert.equal(s.runeCounts.spark,0);
   s.balances.energy=20;roll(s,()=>0);assert.equal(s.runeCounts.spark,1);
   assert.equal(s.rolls,396);assert.equal(s.untrackedRolls,395);
+});
+
+import { copiesForLevel, runeProgress } from '../src/progression/runes.js';
+import { reforgeCost, hasEnergyAutomation } from '../src/progression/reforge.js';
+import { forgeSupply } from '../src/progression/forge.js';
+import { summarizeRolls } from '../src/ui/roll-feedback.js';
+test('duplicate requirements grow and partial progress survives save and reforge', () => {
+  const s=newPlayer();s.balances.energy=200;
+  assert.equal(roll(s,()=>0).isNew,true);
+  assert.equal(roll(s,()=>0).leveledUp,false);assert.equal(s.runes.spark,1);
+  assert.equal(roll(s,()=>0).levelAfter,2);
+  roll(s,()=>0);assert.equal(s.runeXP.spark,4);
+  const restored=migrate(JSON.parse(JSON.stringify(s)));
+  assert.equal(restored.runes.spark,2);assert.equal(restored.runeXP.spark,4);
+  restored.balances.coins=1000;restored.balances.crystals=25;reforge(restored);
+  assert.equal(restored.runeXP.spark,4);
+});
+test('legacy levels retain their effects without replaying historic counts', () => {
+  const s=migrate({version:3,runes:{spark:10,nexus:5},runeCounts:{spark:400},rolls:400});
+  assert.equal(s.runes.spark,10);assert.equal(s.runeXP.spark,copiesForLevel(10));
+  assert.equal(s.runeXP.nexus,15);assert.equal(s.runeCounts.spark,400);
+  s.balances.energy=20;roll(s,()=>0);assert.equal(s.runes.spark,10);assert.equal(s.runeXP.spark,56);
+  assert.equal(migrate({version:4,runeXP:{spark:1e20}}).runes.spark,30);
+});
+test('extreme Luck preserves rarity ordering and bounds the rarest probability', () => {
+  const s=newPlayer();let last=0;
+  for(const level of [0,1,10,100,1e10]){
+    s.upgrades.crystalLuck=level;const chances=probabilities(s);
+    assert.ok(chances.at(-1)>=last);last=chances.at(-1);
+    assert.ok(last<.04);assert.ok(chances.every((v,i)=>!i||v<chances[i-1]));
+    assert.ok(Math.abs(chances.reduce((a,b)=>a+b,0)-1)<1e-12);
+  }
+});
+test('Reforge milestones persist, scale costs, and prevent redundant automation purchases', () => {
+  const s=newPlayer();
+  for(let n=1;n<=3;n++){
+    Object.assign(s.balances,reforgeCost(s));assert.equal(reforge(s),true);
+    assert.equal(s.prestige,n);assert.equal(hasEnergyAutomation(s),true);
+    assert.equal(s.garden,n>=2);
+  }
+  assert.equal(stat(s,'runeBulk'),2);assert.deepEqual(reforgeCost(s),{coins:8000,crystals:100});
+  s.balances.energy=300;assert.equal(buy(s,'autoEnergy'),false);
+  tick(s,1);assert.ok(s.balances.energy>300);
+  assert.equal(migrate({version:3,prestige:2,garden:false}).garden,true);
+});
+test('Energy forecast distinguishes maximum throughput from sustained output', () => {
+  const s=newPlayer();s.balances.energy=320;
+  assert.deepEqual(forgeSupply(s),{demand:160,income:0,sustainableRps:0,runway:2});
+  s.upgrades.autoEnergy=1;
+  assert.equal(forgeSupply(s).sustainableRps,.15);
+  s.runes.nexus=5;s.upgrades.pad=20;s.prestige=100;
+  assert.equal(forgeSupply(s).runway,Infinity);
+});
+test('roll feedback groups duplicate results and retains new rune and level events', () => {
+  const s=newPlayer();s.balances.energy=60;
+  const results=[roll(s,()=>0),roll(s,()=>0),roll(s,()=>0)];
+  assert.equal(summarizeRolls(results),'Spark ×3 · NEW · level 2');
 });
