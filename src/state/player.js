@@ -1,0 +1,20 @@
+import { currencies, runes, upgrades } from '../content/catalog.js';
+import { amount } from '../shared/numbers.js';
+export const SAVE_VERSION = 1;
+export function newPlayer() {
+  return { version: SAVE_VERSION, balances: Object.fromEntries(currencies.map(c => [c.id, 0])), runes: Object.fromEntries(runes.map(r => [r.id, 0])), upgrades: Object.fromEntries(upgrades.map(u => [u.id, 0])), prestige: 0, garden: false, rolls: 0, savedAt: Date.now() };
+}
+export function migrate(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw Error('Invalid save');
+  if (raw.version > SAVE_VERSION) throw Error('Save was made by a newer version');
+  const next = newPlayer();
+  for (const c of currencies) next.balances[c.id] = amount(raw.balances?.[c.id]);
+  for (const [key, entries] of [['runes', runes], ['upgrades', upgrades]]) {
+    for (const item of entries) next[key][item.id] = Math.floor(Math.min(item.cap, amount(raw[key]?.[item.id])));
+  }
+  next.prestige = Math.floor(Math.min(10000, amount(raw.prestige)));
+  next.rolls = Math.floor(amount(raw.rolls));
+  next.garden = raw.garden === true;
+  next.savedAt = Number.isFinite(raw.savedAt) ? raw.savedAt : Date.now();
+  return next;
+}
