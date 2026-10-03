@@ -1,8 +1,8 @@
 import { currencies, runes, upgrades } from '../content/catalog.js';
 import { amount } from '../shared/numbers.js';
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export function newPlayer() {
-  return { version: SAVE_VERSION, balances: Object.fromEntries(currencies.map(c => [c.id, 0])), runes: Object.fromEntries(runes.map(r => [r.id, 0])), upgrades: Object.fromEntries(upgrades.map(u => [u.id, 0])), prestige: 0, garden: false, rolls: 0, savedAt: Date.now() };
+  return { version: SAVE_VERSION, balances: Object.fromEntries(currencies.map(c => [c.id, 0])), runes: Object.fromEntries(runes.map(r => [r.id, 0])), upgrades: Object.fromEntries(upgrades.map(u => [u.id, 0])), runeCounts: Object.fromEntries(runes.map(r => [r.id, 0])), untrackedRolls: 0, prestige: 0, garden: false, rolls: 0, savedAt: Date.now() };
 }
 export function migrate(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw Error('Invalid save');
@@ -15,6 +15,10 @@ export function migrate(raw) {
   }
   next.prestige = Math.floor(Math.min(10000, amount(raw.prestige)));
   next.rolls = Math.floor(amount(raw.rolls));
+  // v3 tracks opening quantities independently of capped rune levels.
+  // Historical per-rune counts were not stored, so keep earlier rolls untracked.
+  for (const rune of runes) next.runeCounts[rune.id] = Math.floor(amount(raw.runeCounts?.[rune.id]));
+  next.untrackedRolls = raw.version >= 3 ? Math.floor(amount(raw.untrackedRolls)) : next.rolls;
   next.garden = raw.garden === true;
   next.savedAt = Number.isFinite(raw.savedAt) ? raw.savedAt : Date.now();
   return next;
