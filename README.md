@@ -35,7 +35,17 @@ Add currencies and rune effects in the catalog; update content validation for ne
 
 ## Testing tools and limitations
 
-Developer tools grant resources, unlock the garden, and accelerate progression by 5× or 20×. Movement remains at normal speed. Reset local save asks for confirmation. Autosave runs every five active seconds and when leaving/hiding the page. Saves belong to this browser and origin. Invalid or future saves pause autosave to avoid overwriting the original data; Reset local save explicitly starts over.
+Open **Developer** from the dock or press **Shift + D** (outside text fields). The panel pauses gameplay while open and has Resources, Levels, World & time, and Reset data categories. All controls have labels, visible keyboard focus, and touch-sized buttons. Escape closes the panel; only the panel content scrolls on smaller screens.
+
+- Add or set a selected currency, grant all currencies, or fund the next Reforge.
+- Set individual rune/upgrade levels or max them all. Rune edits synchronize copy progress without inventing lifetime opening counts.
+- Set Reforge count, unlock the garden, and teleport to spawn, pad, forge or the unlocked garden.
+- Pause simulation or use 1×, 5× or 20× progression speed. Speed settings last only for the current session; movement stays normal when running.
+- Reset currencies, purchased upgrades or rune levels separately. Milestone benefits and lifetime counts remain.
+- **Reset all progress** clears all progression and replaces the browser save with a fresh game.
+- **Erase saved data** deletes only Rune Factory’s storage key, clears in-memory progress and pauses saving until **Save now** is pressed. Both full resets return to spawn at 1×. Destructive actions require confirmation. Storage failures leave the current game intact and report an error.
+
+Autosave runs every five active seconds and when leaving/hiding the page. Saves belong to this browser and origin. Invalid or future saves pause autosave to protect the original data; a successful full reset explicitly starts over.
 
 This first version pauses while the tab is hidden and has no offline income, accounts, cloud saves, multiplayer, audio, inventory equipment. Rune Speed increases the continuous automatic rolling rate. Currency balances are a transparent left HUD. Upgrades, runes, Reforge and testing controls open in modal panels; rune and upgrade cards scroll horizontally inside their popups. The map fits the viewport, so no scrolling camera is needed yet. Numbers use JavaScript floating point with a 1e100 ceiling; unlimited late-game numbers require a future large-number adapter. Graphics are placeholders. Debug tools are intentionally exposed for testing and must be gated before a competitive release.
 
