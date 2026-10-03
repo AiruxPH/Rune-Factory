@@ -1,11 +1,13 @@
 import { world } from '../content/world.js';
 import { earn, rate, unlockGarden } from '../progression/economy.js';
 import { ForgeCollector } from '../progression/forge.js';
+import { summarizeRolls } from '../ui/roll-feedback.js';
 
 export class World {
   constructor(canvas, getState, notify) {
     this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.getState = getState; this.notify = notify;
     this.player = { ...world.spawn }; this.keys = new Set(); this.forge = new ForgeCollector();
+    this.rollFeedback = ''; this.feedbackResults = []; this.feedbackClock = 0; this.feedbackAge = 0;
     this.nodes = world.nodes.map(n => ({...n, cooldown:0}));
     window.addEventListener('keydown', event => {
       if (document.querySelector('dialog[open]') || ['INPUT','SELECT','TEXTAREA','BUTTON'].includes(event.target.tagName)) return;
@@ -16,7 +18,7 @@ export class World {
     window.addEventListener('keyup', event => this.keys.delete(event.key.toLowerCase()));
     window.addEventListener('blur', () => this.keys.clear());
   }
-  reset() { this.player = {...world.spawn}; this.forge.reset(); this.nodes.forEach(n => n.cooldown = 0); }
+  reset() { this.rollFeedback = ''; this.feedbackResults = []; this.feedbackClock = 0; this.feedbackAge = 0; this.lastRune = ''; this.player = {...world.spawn}; this.forge.reset(); this.nodes.forEach(n => n.cooldown = 0); }
   inside(rect, x=this.player.x, y=this.player.y) { return x > rect.x && x < rect.x+rect.w && y > rect.y && y < rect.y+rect.h; }
   nearby(rect) { return this.player.x > rect.x-45 && this.player.x < rect.x+rect.w+45 && this.player.y > rect.y-45 && this.player.y < rect.y+rect.h+45; }
   nearForge() { return this.nearby(world.forge); }
@@ -41,10 +43,17 @@ export class World {
     if (!this.blocked(x,this.player.y)) this.player.x=x;
     if (!this.blocked(this.player.x,y)) this.player.y=y;
     const results = this.forge.update(this.getState(), simulationSeconds, this.inside(world.forge));
+    this.feedbackClock += seconds; this.feedbackAge += seconds;
     if (results.length) {
+      this.feedbackResults.push(...results); this.feedbackAge = 0;
       const result = results.at(-1);
       this.lastRune = result.rune.name + (result.capped ? ' · MAX' : ' · level ' + this.getState().runes[result.rune.id]);
     }
+    if (this.feedbackClock >= 1) {
+      if (this.feedbackResults.length) this.rollFeedback = summarizeRolls(this.feedbackResults);
+      this.feedbackResults = []; this.feedbackClock = 0;
+    }
+    if (this.feedbackAge > 5) this.rollFeedback = '';
     const state = this.getState();
     for (const node of this.nodes) {
       node.cooldown = Math.max(0,node.cooldown-simulationSeconds);

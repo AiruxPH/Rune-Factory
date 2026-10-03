@@ -1,6 +1,7 @@
 import { pool, runeRules } from '../content/catalog.js';
 import { stat } from './effects.js';
-import { roll } from './economy.js';
+import { roll, rate } from './economy.js';
+import { hasEnergyAutomation } from './reforge.js';
 export function runeStats(state) {
   const speed = stat(state, 'runeSpeed');
   const rawInterval = 1 / (pool.rollsPerSecond * speed);
@@ -9,6 +10,12 @@ export function runeStats(state) {
   const baseBulk = stat(state, 'runeBulk');
   const bulk = baseBulk * conversion;
   return { interval, rawInterval, baseBulk, bulk, conversion, luck: stat(state, 'runeLuck'), rps: bulk / interval };
+}
+export function forgeSupply(state) {
+  const demand = runeStats(state).rps * pool.cost;
+  const income = hasEnergyAutomation(state) ? rate(state, 'energy') : 0;
+  return { demand, income, sustainableRps: Math.min(demand, income) / pool.cost,
+    runway: income >= demand ? Infinity : state.balances.energy / (demand - income) };
 }
 // Automatic batches with fractional bulk carry. Leaving or running out of funds
 // discards unfinished work, so no unpaid backlog can burst on a later deposit.
