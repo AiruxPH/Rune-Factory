@@ -3,6 +3,7 @@ import { load, save, SAVE_KEY } from './state/save.js';
 import { newPlayer } from './state/player.js';
 import { tick, buy, earn, reforge } from './progression/economy.js';
 import { World } from './game/world.js';
+import { setupDialogs } from './ui/dialogs.js';
 import { createPanels, renderPanels } from './ui/panels.js';
 validateContent();
 let storage;try{storage=window.localStorage;}catch{storage={getItem(){throw Error('Unavailable');},setItem(){throw Error('Unavailable');}};}
@@ -13,6 +14,7 @@ status.textContent=loaded.error||'Local save ready';
 function notify(message){const toast=document.querySelector('#toast');toast.textContent=message;toast.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.style.display='none',3500);}
 const world=new World(document.querySelector('#world'),()=>state,notify);
 createPanels();
+setupDialogs(world);
 function persist(){if(!autosave)return;status.textContent=save(storage,state)?'Saved locally':'Save unavailable · progress is in memory';}
 document.querySelector('#save').onclick=()=>{if(!autosave){notify(loaded.error);return;}persist();};
 document.querySelector('#interact').onclick=()=>world.interact();

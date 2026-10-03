@@ -62,3 +62,22 @@ test('save roundtrip and failure handling preserve existing data', () => {
   data.set(SAVE_KEY,'broken'); assert.ok(load(storage).error); assert.equal(data.get(SAVE_KEY),'broken');
   assert.equal(save({setItem(){throw Error('Quota');}},s),false);
 });
+
+import { ForgeCollector } from '../src/progression/forge.js';
+test('forge rolls immediately on entry and stops on exit', () => {
+  const state=newPlayer(), forge=new ForgeCollector(); state.balances.energy=100;
+  assert.equal(forge.update(state,0,true,()=>0).length,1);
+  assert.equal(state.balances.energy,80);
+  assert.equal(forge.update(state,10,false,()=>0).length,0);
+  assert.equal(state.rolls,1);
+});
+test('automatic rolling is time-based and does not accrue unpaid rolls', () => {
+  const a=newPlayer(), b=newPlayer(), fa=new ForgeCollector(), fb=new ForgeCollector();
+  a.balances.energy=b.balances.energy=1000;
+  fa.update(a,1,true,()=>0);
+  for(let i=0;i<10;i++) fb.update(b,.1,true,()=>0);
+  assert.equal(a.rolls,b.rolls); assert.equal(a.rolls,9);
+  const empty=newPlayer(), f=new ForgeCollector(); f.update(empty,100,true,()=>0);
+  empty.balances.energy=20; assert.equal(f.update(empty,.125,true,()=>0).length,1);
+  assert.equal(empty.balances.energy,0);
+});

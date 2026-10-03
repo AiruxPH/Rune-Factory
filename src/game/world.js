@@ -1,14 +1,14 @@
 import { world } from '../content/world.js';
-import { earn, rate, roll, unlockGarden } from '../progression/economy.js';
-import { stat } from '../progression/effects.js';
-import { pool } from '../content/catalog.js';
+import { earn, rate, unlockGarden } from '../progression/economy.js';
+import { ForgeCollector } from '../progression/forge.js';
+
 export class World {
   constructor(canvas, getState, notify) {
     this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.getState = getState; this.notify = notify;
-    this.player = { ...world.spawn }; this.keys = new Set(); this.cooldown = 0;
+    this.player = { ...world.spawn }; this.keys = new Set(); this.forge = new ForgeCollector();
     this.nodes = world.nodes.map(n => ({...n, cooldown:0}));
     window.addEventListener('keydown', event => {
-      if (['INPUT','SELECT','TEXTAREA','BUTTON'].includes(event.target.tagName)) return;
+      if (document.querySelector('dialog[open]') || ['INPUT','SELECT','TEXTAREA','BUTTON'].includes(event.target.tagName)) return;
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(event.key)) event.preventDefault();
       this.keys.add(event.key.toLowerCase());
       if (event.key.toLowerCase() === 'e' && !event.repeat) this.interact();
@@ -16,7 +16,7 @@ export class World {
     window.addEventListener('keyup', event => this.keys.delete(event.key.toLowerCase()));
     window.addEventListener('blur', () => this.keys.clear());
   }
-  reset() { this.player = {...world.spawn}; this.cooldown = 0; this.nodes.forEach(n => n.cooldown = 0); }
+  reset() { this.player = {...world.spawn}; this.forge.reset(); this.nodes.forEach(n => n.cooldown = 0); }
   inside(rect, x=this.player.x, y=this.player.y) { return x > rect.x && x < rect.x+rect.w && y > rect.y && y < rect.y+rect.h; }
   nearby(rect) { return this.player.x > rect.x-45 && this.player.x < rect.x+rect.w+45 && this.player.y > rect.y-45 && this.player.y < rect.y+rect.h+45; }
   onPad() { return this.inside(world.pad); }
@@ -25,14 +25,7 @@ export class World {
     if (this.nearby(world.gate) && !state.garden) {
       this.notify(unlockGarden(state) ? 'Crystal garden unlocked!' : 'You need 100 coins to open the garden.'); return;
     }
-    if (this.nearby(world.forge)) {
-      if (this.cooldown > 0) { this.notify('Forge is cooling down.'); return; }
-      const result = roll(state);
-      if (!result) { this.notify('You need 20 Energy to roll.'); return; }
-      this.cooldown = pool.cooldown / stat(state, 'runeSpeed');
-      this.notify(result.rune.name + (result.capped ? ' rolled · already at maximum level' : ' rolled · level ' + state.runes[result.rune.id])); return;
-    }
-    this.notify('Stand on the mint pad for Energy, or approach the violet rune forge.');
+    this.notify('Stand on the mint pad for Energy, or stand on the violet rune forge to roll automatically.');
   }
   blocked(x,y) {
     const walls = this.getState().garden ? world.walls : [...world.walls, world.gate];
@@ -46,7 +39,11 @@ export class World {
     const y = Math.max(35,Math.min(605,this.player.y+dy/length*210*seconds));
     if (!this.blocked(x,this.player.y)) this.player.x=x;
     if (!this.blocked(this.player.x,y)) this.player.y=y;
-    this.cooldown = Math.max(0,this.cooldown-simulationSeconds);
+    const results = this.forge.update(this.getState(), simulationSeconds, this.inside(world.forge));
+    if (results.length) {
+      const result = results.at(-1);
+      this.lastRune = result.rune.name + (result.capped ? ' · MAX' : ' · level ' + this.getState().runes[result.rune.id]);
+    }
     const state = this.getState();
     for (const node of this.nodes) {
       node.cooldown = Math.max(0,node.cooldown-simulationSeconds);
@@ -57,7 +54,8 @@ export class World {
   }
   prompt() {
     if (this.nearby(world.gate) && !this.getState().garden) return 'Crystal garden · 100 coins · press E';
-    if (this.nearby(world.forge)) return this.cooldown>0 ? 'Forge cooling · '+this.cooldown.toFixed(1)+'s' : 'Starter forge · 20 Energy · press E';
+    if (this.inside(world.forge)) return this.getState().balances.energy < 20 ? 'Auto forge · waiting for 20 Energy' : 'Auto rolling · ' + (this.lastRune || '20 Energy per rune');
+    if (this.nearby(world.forge)) return 'Stand inside the forge to roll automatically';
     if (this.onPad()) return 'Charging Energy · stay on the pad';
     return this.getState().garden && this.player.x>690 ? 'Walk over crystals to collect · respawn 4s' : 'Explore your workshop';
   }
@@ -69,7 +67,7 @@ export class World {
     for(let y=0;y<640;y+=40){c.beginPath();c.moveTo(0,y);c.lineTo(960,y);c.stroke();}
     c.fillStyle='#182b2b';c.fillRect(690,20,250,600);
     const box=(r,color,label,subtitle)=>{c.fillStyle=color+'22';c.fillRect(r.x,r.y,r.w,r.h);c.strokeStyle=color;c.lineWidth=2;c.strokeRect(r.x,r.y,r.w,r.h);c.fillStyle=color;c.textAlign='center';c.font='bold 17px system-ui';c.fillText(label,r.x+r.w/2,r.y+45);c.font='13px system-ui';c.fillText(subtitle,r.x+r.w/2,r.y+72);};
-    box(world.pad,'#70dfbf','ENERGY PAD','Stand here to charge');box(world.forge,'#b6a0ff','RUNE FORGE','20 Energy / opening');
+    box(world.pad,'#70dfbf','ENERGY PAD','Stand here to charge');box(world.forge,'#b6a0ff','RUNE FORGE','Stand here · auto roll');
     c.textAlign='left';c.fillStyle='#79909e';c.font='12px system-ui';c.fillText('01 / WORKSHOP',45,65);c.fillText('02 / CRYSTAL GARDEN',715,65);
     c.fillStyle='#344952';for(const wall of world.walls)c.fillRect(wall.x,wall.y,wall.w,wall.h);
     if(!state.garden){c.fillStyle='#aa8951';c.fillRect(world.gate.x,world.gate.y,world.gate.w,world.gate.h);c.save();c.translate(645,340);c.rotate(-Math.PI/2);c.fillStyle='#e6c68b';c.font='bold 14px system-ui';c.fillText('LOCKED · 100 COINS',0,0);c.restore();}

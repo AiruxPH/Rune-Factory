@@ -16,10 +16,10 @@ export const upgrades = [
   { id: 'income', name: 'Coin engine', description: '+50% base coin income per level', currency: 'coins', cost: 15, growth: 1.6, cap: 20, effects: [{ stat: 'coinsGain', operation: 'add', value: .5 }] },
   { id: 'pad', name: 'Energy condenser', description: '+50% base pad income per level', currency: 'coins', cost: 25, growth: 1.65, cap: 20, effects: [{ stat: 'energyGain', operation: 'add', value: .5 }] },
   { id: 'gather', name: 'Crystal lens', description: '+50% base crystal yield per level', currency: 'crystals', cost: 5, growth: 1.6, cap: 15, effects: [{ stat: 'crystalsGain', operation: 'add', value: .5 }] },
-  { id: 'forge', name: 'Forge accelerator', description: '+20% opening speed per level', currency: 'coins', cost: 40, growth: 1.8, cap: 10, effects: [{ stat: 'runeSpeed', operation: 'add', value: .2 }] },
+  { id: 'forge', name: 'Forge accelerator', description: '+20% automatic rolling rate per level', currency: 'coins', cost: 40, growth: 1.8, cap: 10, effects: [{ stat: 'runeSpeed', operation: 'add', value: .2 }] },
   { id: 'autoEnergy', name: 'Energy automaton', description: 'Collect pad income everywhere', currency: 'coins', cost: 300, growth: 1, cap: 1, effects: [] },
 ];
-export const pool = { id: 'starter', name: 'Starter forge', currency: 'energy', cost: 20, cooldown: 1.2 };
+export const pool = { id: 'starter', name: 'Starter forge', currency: 'energy', cost: 20, rollsPerSecond: 8 };
 export function validateContent() {
   for (const entries of [currencies, runes, upgrades]) {
     if (new Set(entries.map(x => x.id)).size !== entries.length) throw Error('Duplicate content IDs');
