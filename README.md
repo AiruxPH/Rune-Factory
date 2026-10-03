@@ -52,3 +52,8 @@ The HUD shows effective Luck, Bulk, interval and theoretical RPS (funding may li
 ## Popup navigation
 
 Rune cards are one continuous horizontal row. Use a mouse wheel over the cards, a horizontal trackpad gesture, touch swipe, the scrollbar, or Left/Right while the card region is focused. Upgrade tabs filter the same scrollable row to the selected currency and reset its horizontal position. No Previous/Next controls are used. The page itself stays fixed; constrained-height popup content may scroll internally to keep controls reachable. The currency and rune-stat HUD share a vertical flow to prevent overlap, and the world panel stretches across the available viewport width.
+
+
+## Opened rune quantities
+
+The nearby forge board includes a live quantity breakdown beneath the pool content. These lifetime opening counts are separate from capped rune levels, survive Reforge and are saved with schema v3. Old saves retain their total rolls and levels; since earlier versions did not record per-rune history, those earlier rolls are labeled untracked and accurate per-rune counting begins on upgrade.

@@ -114,6 +114,23 @@ test('currency-specific upgrades charge their own currency and Max respects caps
 });
 test('v1 saves retain existing upgrades while new stats initialize to defaults', () => {
   const s=migrate({version:1,upgrades:{pad:4,forge:10,autoEnergy:1},runes:{nexus:2}});
-  assert.equal(s.version,2);assert.equal(s.upgrades.pad,4);assert.equal(s.upgrades.forge,10);
+  assert.equal(s.version,3);assert.equal(s.upgrades.pad,4);assert.equal(s.upgrades.forge,10);
   assert.equal(s.upgrades.coinBulk,0);assert.equal(s.runes.nexus,2);
+});
+
+
+test('opening quantities increase beyond caps and persist through reforge and save migration', () => {
+  const s=newPlayer();s.runes.spark=30;s.balances.energy=100;
+  roll(s,()=>0);roll(s,()=>0);
+  assert.equal(s.runes.spark,30);assert.equal(s.runeCounts.spark,2);
+  s.balances.coins=1000;s.balances.crystals=25;reforge(s);
+  assert.equal(s.runeCounts.spark,2);
+  const restored=migrate(JSON.parse(JSON.stringify(s)));
+  assert.equal(restored.runeCounts.spark,2);assert.equal(restored.untrackedRolls,0);
+});
+test('legacy rolls are preserved as untracked without fabricated rune quantities', () => {
+  const s=migrate({version:2,rolls:395,runes:{spark:30}});
+  assert.equal(s.untrackedRolls,395);assert.equal(s.rolls,395);assert.equal(s.runeCounts.spark,0);
+  s.balances.energy=20;roll(s,()=>0);assert.equal(s.runeCounts.spark,1);
+  assert.equal(s.rolls,396);assert.equal(s.untrackedRolls,395);
 });

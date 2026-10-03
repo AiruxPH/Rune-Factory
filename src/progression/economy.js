@@ -46,6 +46,7 @@ export function roll(state, random = Math.random) {
   const rune = runes[index < 0 ? runes.length - 1 : index];
   const capped = state.runes[rune.id] >= rune.cap;
   state.runes[rune.id] = Math.min(rune.cap, state.runes[rune.id] + 1);
+  state.runeCounts[rune.id] = amount(state.runeCounts[rune.id] + 1);
   state.rolls++; return { rune, capped };
 }
 export function reforge(state) {

@@ -37,7 +37,10 @@ export function renderPanels(state,onPad,nearForge=false) {
   const stats=runeStats(state);
   document.querySelector('#rune-stats').innerHTML=`<div class="luck">×${format(stats.luck)} Rune Luck</div><div class="bulk">${format(stats.bulk)} Rune Bulk</div><div class="speed">${stats.interval.toFixed(3)}s Rune Speed${stats.interval<=.05?' · MAX':''}</div><div class="rps">${format(stats.rps)} RPS</div>${stats.conversion>1?'<small>Excess speed → ×'+stats.conversion.toFixed(2)+' bulk</small>':''}`;
   const board=document.querySelector('#forge-board');board.hidden=!nearForge;
-  board.innerHTML='<strong>Starter rune content</strong>'+runes.map((r,i)=>`<div style="color:${r.color}">${r.name} · ${(chances[i]*100).toFixed(2)}%</div>`).join('')+'<small>'+format(state.rolls)+' opened · '+format(Math.floor(state.balances[pool.currency]/pool.cost))+' affordable rolls</small>';
+  board.innerHTML='<strong>Starter rune content</strong>'+runes.map((r,i)=>`<div style="color:${r.color}">${r.name} · ${(chances[i]*100).toFixed(2)}%</div>`).join('')+'<small>'+format(state.rolls)+' opened · '+format(Math.floor(state.balances[pool.currency]/pool.cost))+' affordable rolls</small>'
+    +'<section class="opened-runes"><strong>Opened rune quantities</strong>'
+    +runes.map(r=>`<div class="opened-row" style="color:${r.color}"><span>${r.name}</span><b>×${format(state.runeCounts[r.id])}</b></div>`).join('')
+    +(state.untrackedRolls?'<small>'+format(state.untrackedRolls)+' earlier rolls are untracked</small>':'')+'</section>';
   document.querySelector('#rune-total').textContent=format(state.rolls)+' OPENED';
   document.querySelector('#area-status').textContent=state.garden?'Crystal garden open':'Crystal garden locked';
   document.querySelector('#prestige').disabled=state.balances.coins<1000||state.balances.crystals<25;
