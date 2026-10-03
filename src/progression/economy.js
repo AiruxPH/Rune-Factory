@@ -21,6 +21,11 @@ export function buy(state, id) {
   if (!item || state.upgrades[id] >= item.cap || !spend(state, item.currency, price(state, item))) return false;
   state.upgrades[id]++; return true;
 }
+export function buyMax(state, id) {
+  let purchased = 0;
+  while (buy(state, id)) purchased++;
+  return purchased;
+}
 export function unlockGarden(state) {
   if (state.garden || !spend(state, 'coins', 100)) return false;
   state.garden = true; return true;

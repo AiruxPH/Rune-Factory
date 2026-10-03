@@ -19,6 +19,7 @@ export class World {
   reset() { this.player = {...world.spawn}; this.forge.reset(); this.nodes.forEach(n => n.cooldown = 0); }
   inside(rect, x=this.player.x, y=this.player.y) { return x > rect.x && x < rect.x+rect.w && y > rect.y && y < rect.y+rect.h; }
   nearby(rect) { return this.player.x > rect.x-45 && this.player.x < rect.x+rect.w+45 && this.player.y > rect.y-45 && this.player.y < rect.y+rect.h+45; }
+  nearForge() { return this.nearby(world.forge); }
   onPad() { return this.inside(world.pad); }
   interact() {
     const state = this.getState();
