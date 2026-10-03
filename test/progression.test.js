@@ -81,3 +81,39 @@ test('automatic rolling is time-based and does not accrue unpaid rolls', () => {
   empty.balances.energy=20; assert.equal(f.update(empty,.125,true,()=>0).length,1);
   assert.equal(empty.balances.energy,0);
 });
+
+import { runeStats } from '../src/progression/forge.js';
+import { buyMax } from '../src/progression/economy.js';
+test('speed interval caps at .05 and excess speed proportionally multiplies bulk', () => {
+  const s=newPlayer(); s.upgrades.forge=20;
+  const stats=runeStats(s);
+  assert.equal(stats.interval,.05); assert.equal(stats.rawInterval,.025);
+  assert.equal(stats.conversion,2); assert.equal(stats.bulk,2); assert.equal(stats.rps,40);
+  s.upgrades.coinBulk=2;
+  assert.equal(runeStats(s).bulk,6); assert.equal(runeStats(s).rps,120);
+});
+test('bulk charges per individual rune and partial batches cannot overspend', () => {
+  const s=newPlayer(); s.upgrades.coinBulk=4; s.balances.energy=45;
+  const f=new ForgeCollector();
+  assert.equal(f.update(s,0,true,()=>0).length,2);
+  assert.equal(s.balances.energy,5); assert.equal(s.rolls,2);
+  assert.equal(f.update(s,1,true,()=>0).length,0);
+});
+test('speed boosts beyond the cap preserve time-based throughput', () => {
+  const a=newPlayer(),b=newPlayer();
+  for(const s of [a,b]){s.upgrades.forge=20;s.upgrades.coinBulk=2;s.balances.energy=10000;}
+  const fa=new ForgeCollector(),fb=new ForgeCollector();fa.update(a,1,true,()=>0);
+  for(let i=0;i<100;i++)fb.update(b,.01,true,()=>0);
+  assert.equal(a.rolls,b.rolls);assert.equal(a.rolls,126);
+});
+test('currency-specific upgrades charge their own currency and Max respects caps', () => {
+  const s=newPlayer();s.balances.coins=10000;
+  assert.equal(buy(s,'pad'),false);s.balances.energy=25;
+  assert.equal(buy(s,'pad'),true);assert.equal(s.balances.energy,0);assert.equal(s.balances.coins,10000);
+  s.balances.coins=1e10;assert.equal(buyMax(s,'income'),20);assert.equal(buyMax(s,'income'),0);
+});
+test('v1 saves retain existing upgrades while new stats initialize to defaults', () => {
+  const s=migrate({version:1,upgrades:{pad:4,forge:10,autoEnergy:1},runes:{nexus:2}});
+  assert.equal(s.version,2);assert.equal(s.upgrades.pad,4);assert.equal(s.upgrades.forge,10);
+  assert.equal(s.upgrades.coinBulk,0);assert.equal(s.runes.nexus,2);
+});

@@ -1,12 +1,13 @@
 import { currencies, runes, upgrades } from '../content/catalog.js';
 import { amount } from '../shared/numbers.js';
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 export function newPlayer() {
   return { version: SAVE_VERSION, balances: Object.fromEntries(currencies.map(c => [c.id, 0])), runes: Object.fromEntries(runes.map(r => [r.id, 0])), upgrades: Object.fromEntries(upgrades.map(u => [u.id, 0])), prestige: 0, garden: false, rolls: 0, savedAt: Date.now() };
 }
 export function migrate(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw Error('Invalid save');
   if (raw.version > SAVE_VERSION) throw Error('Save was made by a newer version');
+  // v2 adds bulk/luck/speed upgrades. Existing stable IDs retain their levels.
   const next = newPlayer();
   for (const c of currencies) next.balances[c.id] = amount(raw.balances?.[c.id]);
   for (const [key, entries] of [['runes', runes], ['upgrades', upgrades]]) {
