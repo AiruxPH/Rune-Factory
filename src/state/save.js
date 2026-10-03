@@ -13,3 +13,13 @@ export function save(storage, state) {
   try { storage.setItem(SAVE_KEY, JSON.stringify({ ...state, savedAt })); state.savedAt = savedAt; return true; }
   catch { return false; }
 }
+
+// Commit storage first so a failed reset cannot silently discard in-memory progress.
+export function resetStoredData(storage, erase = false) {
+  const state = newPlayer();
+  try {
+    if (erase) storage.removeItem(SAVE_KEY);
+    else if (!save(storage, state)) return { ok: false };
+    return { ok: true, state };
+  } catch { return { ok: false }; }
+}

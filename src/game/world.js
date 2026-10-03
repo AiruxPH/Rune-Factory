@@ -19,6 +19,12 @@ export class World {
     window.addEventListener('blur', () => this.keys.clear());
   }
   reset() { this.rollFeedback = ''; this.feedbackResults = []; this.feedbackClock = 0; this.feedbackAge = 0; this.lastRune = ''; this.player = {...world.spawn}; this.forge.reset(); this.nodes.forEach(n => n.cooldown = 0); }
+  teleport(target) {
+    if(target==='garden'&&!this.getState().garden)return false;
+    const destinations={spawn:world.spawn,pad:{x:world.pad.x+world.pad.w/2,y:world.pad.y+world.pad.h/2},forge:{x:world.forge.x+world.forge.w/2,y:world.forge.y+world.forge.h/2},garden:{x:760,y:220}};
+    if(!destinations[target])return false;
+    this.player={...destinations[target]};this.keys.clear();this.forge.reset();return true;
+  }
   inside(rect, x=this.player.x, y=this.player.y) { return x > rect.x && x < rect.x+rect.w && y > rect.y && y < rect.y+rect.h; }
   nearby(rect) { return this.player.x > rect.x-45 && this.player.x < rect.x+rect.w+45 && this.player.y > rect.y-45 && this.player.y < rect.y+rect.h+45; }
   nearForge() { return this.nearby(world.forge); }
